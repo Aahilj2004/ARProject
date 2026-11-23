@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>GTA VI - WebAR</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        #camera {
+            display: none;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        #startScreen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #191319;
+            text-align: center;
+            padding: 25px;
+            z-index: 5;
+        }
+
+        h1 {
+            color: #f2a6ce;
+        }
+
+        button {
+            background: #e9a5ce;
+            color: #171117;
+            border: none;
+            border-radius: 8px;
+            padding: 13px 20px;
+            margin: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 2;
+            overflow-y: auto;
+            pointer-events: none;
+        }
+
+        .panel {
+            background: rgba(25, 17, 27, 0.9);
+            border: 1px solid #e9a5ce;
+            border-radius: 12px;
+            padding: 15px;
+            margin: 15px;
+            pointer-events: auto;
+        }
+
+        .welcome {
+            text-align: center;
+            margin-top: 25px;
+        }
+
+        .characters {
+            display: flex;
+            gap: 10px;
+        }
+
+        .characters .panel {
+            flex: 1;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        #info {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 85%;
+            max-width: 350px;
+            z-index: 4;
+        }
+
+        #stop {
+            position: fixed;
+            bottom: 15px;
+            right: 15px;
+            z-index: 6;
+        }
+
+        #status {
+            color: #f2a6ce;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <video id="camera" autoplay playsinline muted></video>
+
+    <div id="startScreen">
+
+        <h1>GRAND THEFT AUTO VI</h1>
+
+        <p>Welcome to Leonida.</p>
+
+        <p>Enter the world of GTA VI through Augmented Reality.</p>
+
+        <button onclick="startAR()">START AR</button>
+
+        <p id="status"></p>
+
+    </div>
+
+    <div id="overlay">
+
+        <div class="panel welcome">
+            <h2>WELCOME TO LEONIDA</h2>
+            <p>A world of crime, chaos and opportunity.</p>
+        </div>
+
+        <div class="characters">
+
+            <div class="panel">
+                <h3>LUCIA</h3>
+                <button onclick="showInfo('lucia')">
+                    EXPLORE
+                </button>
+            </div>
+
+            <div class="panel">
+                <h3>JASON</h3>
+                <button onclick="showInfo('jason')">
+                    EXPLORE
+                </button>
+            </div>
+
+        </div>
+
+        <div class="panel welcome">
+            <h3>GRAND THEFT AUTO VI</h3>
+            <p>Discover the world of Leonida.</p>
+
+            <button onclick="showInfo('game')">
+                EXPLORE THE GAME
+            </button>
+        </div>
+
+    </div>
+
+    <div id="info" class="panel">
+
+        <h2 id="infoTitle"></h2>
+
+        <p id="infoText"></p>
+
+        <button onclick="closeInfo()">CLOSE</button>
+
+    </div>
+
+    <button id="stop" onclick="stopAR()" style="display:none">
+        EXIT AR
+    </button>
+
+    <script>
+
+        const camera = document.getElementById("camera");
+
+        async function startAR() {
+
+            try {
+
+                const stream =
+                    await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: "environment"
+                        },
+                        audio: false
+                    });
+
+                camera.srcObject = stream;
+
+                camera.style.display = "block";
+
+                document.getElementById("startScreen").style.display = "none";
+
+                document.getElementById("overlay").style.display = "block";
+
+                document.getElementById("stop").style.display = "block";
+
+            }
+
+            catch (error) {
+
+                document.getElementById("status").innerText =
+                    "Camera access failed. Please allow camera permission.";
+
+            }
+
+        }
+
+        function showInfo(type) {
+
+            const title = document.getElementById("infoTitle");
+
+            const text = document.getElementById("infoText");
+
+            if (type === "lucia") {
+
+                title.innerText = "LUCIA";
+
+                text.innerText =
+                    "Lucia is one of the two protagonists in Grand Theft Auto VI.";
+
+            }
+
+            else if (type === "jason") {
+
+                title.innerText = "JASON";
+
+                text.innerText =
+                    "Jason is the other protagonist in Grand Theft Auto VI.";
+
+            }
+
+            else {
+
+                title.innerText = "GRAND THEFT AUTO VI";
+
+                text.innerText =
+                    "Discover Leonida, a fictional state inspired by Florida. Explore the setting, characters and world of GTA VI.";
+
+            }
+
+            document.getElementById("info").style.display = "block";
+
+        }
+
+        function closeInfo() {
+
+            document.getElementById("info").style.display = "none";
+
+        }
+
+        function stopAR() {
+
+            if (camera.srcObject) {
+
+                camera.srcObject.getTracks().forEach(track => track.stop());
+
+                camera.srcObject = null;
+
+            }
+
+            camera.style.display = "none";
+
+            document.getElementById("overlay").style.display = "none";
+
+            document.getElementById("info").style.display = "none";
+
+            document.getElementById("stop").style.display = "none";
+
+            document.getElementById("startScreen").style.display = "flex";
+
+        }
+
+    </script>
+
+</body>
+</html>
