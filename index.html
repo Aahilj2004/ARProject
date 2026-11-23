@@ -1,81 +1,130 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>GTA VI - WebAR</title>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>GTA VI - Augmented Reality</title>
 
     <style>
+
         * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
 
         body {
-            margin: 0;
+            font-family: Arial, sans-serif;
             background: #111;
             color: white;
-            font-family: Arial, sans-serif;
+            overflow: hidden;
         }
 
-        #camera {
-            display: none;
-            position: fixed;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 0;
-        }
+        /* POSTER OPENING SCREEN */
 
         #startScreen {
             position: fixed;
             inset: 0;
+            background: #111;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            background: #191319;
-            text-align: center;
-            padding: 25px;
-            z-index: 5;
+            z-index: 10;
         }
 
-        h1 {
-            color: #f2a6ce;
+        #poster {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #111;
         }
 
-        button {
+        #startButton {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+
+            padding: 15px 35px;
+            border: 2px solid white;
+            border-radius: 8px;
+
             background: #e9a5ce;
             color: #171117;
-            border: none;
-            border-radius: 8px;
-            padding: 13px 20px;
-            margin: 6px;
+
+            font-size: 16px;
             font-weight: bold;
+
             cursor: pointer;
         }
+
+        /* CAMERA */
+
+        #camera {
+            display: none;
+            position: fixed;
+            inset: 0;
+
+            width: 100%;
+            height: 100%;
+
+            object-fit: cover;
+            z-index: 1;
+        }
+
+        /* AR INTERFACE */
 
         #overlay {
             display: none;
             position: fixed;
             inset: 0;
+
+            width: 100%;
+            height: 100%;
+
             z-index: 2;
             overflow-y: auto;
+
             pointer-events: none;
         }
 
         .panel {
-            background: rgba(25, 17, 27, 0.9);
+            background: rgba(25, 17, 27, 0.90);
+
             border: 1px solid #e9a5ce;
             border-radius: 12px;
-            padding: 15px;
+
+            padding: 18px;
             margin: 15px;
+
             pointer-events: auto;
         }
 
+        /* WELCOME PANEL */
+
         .welcome {
             text-align: center;
-            margin-top: 25px;
+            margin-top: 35px;
         }
+
+        .welcome h2 {
+            color: #f2a6ce;
+            font-size: 25px;
+            margin-bottom: 10px;
+        }
+
+        .welcome p {
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* CHARACTER PANELS */
 
         .characters {
             display: flex;
@@ -85,87 +134,203 @@
         .characters .panel {
             flex: 1;
             text-align: center;
-            margin-top: 15px;
+            margin-top: 20px;
         }
+
+        .characters h3 {
+            color: #f2a6ce;
+            margin-bottom: 12px;
+        }
+
+        /* BUTTONS */
+
+        button {
+            background: #e9a5ce;
+            color: #171117;
+
+            border: none;
+            border-radius: 7px;
+
+            padding: 12px 18px;
+            margin-top: 10px;
+
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        /* INFORMATION WINDOW */
 
         #info {
             display: none;
+
             position: fixed;
             top: 50%;
             left: 50%;
+
             transform: translate(-50%, -50%);
+
             width: 85%;
             max-width: 350px;
-            z-index: 4;
+
+            z-index: 5;
+            text-align: center;
         }
 
-        #stop {
-            position: fixed;
-            bottom: 15px;
-            right: 15px;
-            z-index: 6;
-        }
-
-        #status {
+        #info h2 {
             color: #f2a6ce;
-            font-size: 14px;
+            margin-bottom: 15px;
         }
+
+        #info p {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* EXIT BUTTON */
+
+        #exitButton {
+            display: none;
+
+            position: fixed;
+            bottom: 20px;
+            right: 15px;
+
+            z-index: 6;
+
+            background: #e9a5ce;
+            color: #171117;
+        }
+
+        /* CAMERA ERROR */
+
+        #errorMessage {
+            color: #ffaaaa;
+            font-size: 14px;
+            margin-top: 15px;
+            max-width: 300px;
+        }
+
     </style>
+
 </head>
 
 <body>
 
-    <video id="camera" autoplay playsinline muted></video>
+
+    <!-- OPENING POSTER -->
 
     <div id="startScreen">
 
-        <h1>GRAND THEFT AUTO VI</h1>
+        <img
+            src="poster.png"
+            id="poster"
+            alt="GTA VI Poster"
+        >
 
-        <p>Welcome to Leonida.</p>
+        <button
+            id="startButton"
+            onclick="startAR()">
 
-        <p>Enter the world of GTA VI through Augmented Reality.</p>
+            START AR
 
-        <button onclick="startAR()">START AR</button>
-
-        <p id="status"></p>
+        </button>
 
     </div>
+
+
+    <!-- LIVE CAMERA -->
+
+    <video
+        id="camera"
+        autoplay
+        playsinline
+        muted>
+
+    </video>
+
+
+    <!-- AR FLOATING PANELS -->
 
     <div id="overlay">
 
+
+        <!-- WELCOME PANEL -->
+
         <div class="panel welcome">
+
             <h2>WELCOME TO LEONIDA</h2>
-            <p>A world of crime, chaos and opportunity.</p>
+
+            <p>
+                A world of crime, chaos
+                and opportunity.
+            </p>
+
         </div>
+
+
+        <!-- CHARACTER PANELS -->
 
         <div class="characters">
 
-            <div class="panel">
-                <h3>LUCIA</h3>
-                <button onclick="showInfo('lucia')">
-                    EXPLORE
-                </button>
-            </div>
 
             <div class="panel">
-                <h3>JASON</h3>
-                <button onclick="showInfo('jason')">
+
+                <h3>LUCIA</h3>
+
+                <button onclick="showInfo('lucia')">
+
                     EXPLORE
+
                 </button>
+
             </div>
+
+
+            <div class="panel">
+
+                <h3>JASON</h3>
+
+                <button onclick="showInfo('jason')">
+
+                    EXPLORE
+
+                </button>
+
+            </div>
+
 
         </div>
+
+
+        <!-- GAME INFORMATION PANEL -->
 
         <div class="panel welcome">
-            <h3>GRAND THEFT AUTO VI</h3>
-            <p>Discover the world of Leonida.</p>
+
+            <h2>GRAND THEFT AUTO VI</h2>
+
+            <p>
+                Discover the world of Leonida.
+                Explore the characters and setting
+                of the next Grand Theft Auto.
+            </p>
 
             <button onclick="showInfo('game')">
+
                 EXPLORE THE GAME
+
             </button>
+
         </div>
 
+
     </div>
+
+
+    <!-- INFORMATION POPUP -->
 
     <div id="info" class="panel">
 
@@ -173,17 +338,35 @@
 
         <p id="infoText"></p>
 
-        <button onclick="closeInfo()">CLOSE</button>
+        <button onclick="closeInfo()">
+
+            CLOSE
+
+        </button>
 
     </div>
 
-    <button id="stop" onclick="stopAR()" style="display:none">
+
+    <!-- EXIT AR BUTTON -->
+
+    <button
+        id="exitButton"
+        onclick="stopAR()">
+
         EXIT AR
+
     </button>
+
 
     <script>
 
+
+        // GET CAMERA ELEMENT
+
         const camera = document.getElementById("camera");
+
+
+        // START AR EXPERIENCE
 
         async function startAR() {
 
@@ -191,99 +374,182 @@
 
                 const stream =
                     await navigator.mediaDevices.getUserMedia({
+
                         video: {
                             facingMode: "environment"
                         },
+
                         audio: false
+
                     });
+
+
+                // START CAMERA
 
                 camera.srcObject = stream;
 
+                await camera.play();
+
+
+                // HIDE POSTER
+
+                document.getElementById(
+                    "startScreen"
+                ).style.display = "none";
+
+
+                // SHOW CAMERA
+
                 camera.style.display = "block";
 
-                document.getElementById("startScreen").style.display = "none";
 
-                document.getElementById("overlay").style.display = "block";
+                // SHOW AR PANELS
 
-                document.getElementById("stop").style.display = "block";
+                document.getElementById(
+                    "overlay"
+                ).style.display = "block";
+
+
+                // SHOW EXIT BUTTON
+
+                document.getElementById(
+                    "exitButton"
+                ).style.display = "block";
+
 
             }
 
             catch (error) {
 
-                document.getElementById("status").innerText =
-                    "Camera access failed. Please allow camera permission.";
+                alert(
+                    "Unable to access camera. Please allow camera permission and use HTTPS."
+                );
+
+                console.error(error);
 
             }
 
         }
 
+
+
+        // DISPLAY INFORMATION
+
         function showInfo(type) {
 
-            const title = document.getElementById("infoTitle");
+            const title =
+                document.getElementById("infoTitle");
 
-            const text = document.getElementById("infoText");
+            const text =
+                document.getElementById("infoText");
+
 
             if (type === "lucia") {
 
                 title.innerText = "LUCIA";
 
                 text.innerText =
-                    "Lucia is one of the two protagonists in Grand Theft Auto VI.";
+                    "Lucia is one of the two protagonists in Grand Theft Auto VI. Discover her story and journey through Leonida.";
 
             }
+
 
             else if (type === "jason") {
 
                 title.innerText = "JASON";
 
                 text.innerText =
-                    "Jason is the other protagonist in Grand Theft Auto VI.";
+                    "Jason is the other protagonist in Grand Theft Auto VI. Explore his character and his connection with Lucia.";
 
             }
 
-            else {
 
-                title.innerText = "GRAND THEFT AUTO VI";
+            else if (type === "game") {
+
+                title.innerText =
+                    "GRAND THEFT AUTO VI";
 
                 text.innerText =
-                    "Discover Leonida, a fictional state inspired by Florida. Explore the setting, characters and world of GTA VI.";
+                    "Developed by Rockstar Games, Grand Theft Auto VI takes players to Leonida, a fictional state inspired by Florida. Discover its characters, setting and story.";
 
             }
 
-            document.getElementById("info").style.display = "block";
+
+            // OPEN INFORMATION WINDOW
+
+            document.getElementById(
+                "info"
+            ).style.display = "block";
 
         }
+
+
+
+        // CLOSE INFORMATION WINDOW
 
         function closeInfo() {
 
-            document.getElementById("info").style.display = "none";
+            document.getElementById(
+                "info"
+            ).style.display = "none";
 
         }
 
+
+
+        // STOP AR EXPERIENCE
+
         function stopAR() {
+
+
+            // STOP CAMERA STREAM
 
             if (camera.srcObject) {
 
-                camera.srcObject.getTracks().forEach(track => track.stop());
+                camera.srcObject
+                    .getTracks()
+                    .forEach(track => track.stop());
 
                 camera.srcObject = null;
 
             }
 
+
+            // HIDE CAMERA
+
             camera.style.display = "none";
 
-            document.getElementById("overlay").style.display = "none";
 
-            document.getElementById("info").style.display = "none";
+            // HIDE AR PANELS
 
-            document.getElementById("stop").style.display = "none";
+            document.getElementById(
+                "overlay"
+            ).style.display = "none";
 
-            document.getElementById("startScreen").style.display = "flex";
+
+            // CLOSE INFORMATION
+
+            closeInfo();
+
+
+            // HIDE EXIT BUTTON
+
+            document.getElementById(
+                "exitButton"
+            ).style.display = "none";
+
+
+            // RETURN TO POSTER
+
+            document.getElementById(
+                "startScreen"
+            ).style.display = "flex";
 
         }
+
 
     </script>
 
 </body>
+
 </html>
