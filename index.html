@@ -1,63 +1,217 @@
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
 <title>GTA VI - WebAR</title>
 
 <style>
-
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
 
-body {
+html, body {
+    width: 100%;
+    height: 100%;
     font-family: Arial, sans-serif;
     background: #111;
     color: white;
     overflow: hidden;
+    touch-action: none;
 }
 
 /* OPENING SCREEN */
-
 #startScreen {
     position: fixed;
     inset: 0;
-    background: #111;
+    z-index: 10;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 10;
+    background: #111;
+    overflow: hidden;
 }
 
 #openingPoster {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: contain;
+    background: #111;
 }
 
-#startButton {
+#openingShade {
     position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 35px;
-    background: #e9a5ce;
-    color: #171117;
-    border: none;
-    border-radius: 8px;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(10, 5, 15, 0.08) 20%,
+        rgba(10, 5, 15, 0.25) 45%,
+        rgba(10, 5, 15, 0.94) 100%
+    );
+    pointer-events: none;
+}
+
+#puzzleContent {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    z-index: 2;
+    padding: 18px 18px 12px;
+    text-align: center;
+}
+
+#puzzleTitle {
+    color: #ffd2e9;
+    font-size: clamp(19px, 5vw, 25px);
+    letter-spacing: 2px;
+    text-shadow: 0 2px 12px #000;
+    margin-bottom: 7px;
+}
+
+#puzzleHint {
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.45;
+    max-width: 310px;
+    margin: 0 auto 18px;
+    text-shadow: 0 2px 7px #000;
+}
+
+.joystickRow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: clamp(22px, 9vw, 48px);
+    width: 100%;
+    max-width: 390px;
+    margin: 0 auto;
+}
+
+.joystickUnit {
+    width: min(39vw, 158px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.joystickLabel {
+    color: #ffd2e9;
+    font-size: 10px;
     font-weight: bold;
-    font-size: 16px;
-    z-index: 11;
+    letter-spacing: 2px;
+    text-shadow: 0 2px 8px #000;
+}
+
+.joystick {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 206, 232, 0.55);
+    background:
+        radial-gradient(circle, rgba(255,255,255,0.07) 0 34%, transparent 35%),
+        radial-gradient(circle, rgba(233,165,206,0.13), rgba(22,12,25,0.84) 70%);
+    box-shadow:
+        0 0 0 5px rgba(233,165,206,0.08),
+        0 0 22px rgba(233,165,206,0.28),
+        inset 0 0 20px rgba(0,0,0,0.65);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.joystick::before,
+.joystick::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.13);
+    border-radius: 50%;
+}
+
+.joystick::before { inset: 17%; }
+.joystick::after { inset: 34%; }
+
+.progressRing {
+    position: absolute;
+    inset: -8px;
+    width: calc(100% + 16px);
+    height: calc(100% + 16px);
+    transform: rotate(-90deg);
+    overflow: visible;
+    pointer-events: none;
+}
+
+.progressTrack,
+.progressValue {
+    fill: none;
+    stroke-width: 4;
+}
+
+.progressTrack {
+    stroke: rgba(255,255,255,0.18);
+}
+
+.progressValue {
+    stroke: #ff9dce;
+    stroke-linecap: round;
+    stroke-dasharray: 289;
+    stroke-dashoffset: 289;
+    filter: drop-shadow(0 0 5px #ff78bb);
+    transition: stroke-dashoffset 0.08s linear, stroke 0.15s ease;
+}
+
+.joystickUnit.correct .progressValue {
+    stroke: #7dffcf;
+    filter: drop-shadow(0 0 7px #47ffc0);
+}
+
+.stick {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 34%;
+    height: 34%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle at 35% 30%, #ffe7f3, #e9a5ce 48%, #9e527e 100%);
+    border: 2px solid rgba(255,255,255,0.75);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.55), 0 0 14px rgba(233,165,206,0.65);
+    pointer-events: none;
+}
+
+.joystickUnit.correct .stick {
+    background: radial-gradient(circle at 35% 30%, #eafff7, #7dffcf 48%, #238c70 100%);
+    box-shadow: 0 0 18px rgba(85,255,195,0.85);
+}
+
+#unlockMessage {
+    min-height: 18px;
+    margin-top: 16px;
+    color: #ffd2e9;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: bold;
+    text-shadow: 0 2px 8px #000;
+}
+
+#startScreen.unlocking #puzzleContent {
+    animation: unlockPulse 0.75s ease forwards;
+}
+
+@keyframes unlockPulse {
+    0% { opacity: 1; transform: scale(1); }
+    45% { opacity: 0.5; transform: scale(1.04); }
+    100% { opacity: 0; transform: scale(1.08); }
 }
 
 /* CAMERA */
-
 #camera {
     display: none;
     position: fixed;
@@ -69,20 +223,17 @@ body {
 }
 
 /* AR OVERLAY */
-
 #overlay {
     display: none;
     position: fixed;
     inset: 0;
     z-index: 2;
     overflow-y: auto;
-    padding: 15px;
-    padding-bottom: 90px;
+    padding: 15px 15px 90px;
     pointer-events: none;
 }
 
 /* POSTER INSIDE CAMERA */
-
 #arPoster {
     display: block;
     width: 75%;
@@ -95,7 +246,6 @@ body {
 }
 
 /* INFORMATION PANELS */
-
 .panel {
     background: rgba(25, 17, 27, 0.92);
     border: 1px solid #e9a5ce;
@@ -122,18 +272,12 @@ body {
     line-height: 1.5;
 }
 
-/* CHARACTER BUTTONS */
-
 .characters {
     display: flex;
     gap: 10px;
 }
 
-.characters .panel {
-    flex: 1;
-}
-
-/* BUTTONS */
+.characters .panel { flex: 1; }
 
 button {
     background: #e9a5ce;
@@ -147,11 +291,7 @@ button {
     cursor: pointer;
 }
 
-button:active {
-    transform: scale(0.96);
-}
-
-/* POPUP */
+button:active { transform: scale(0.96); }
 
 #info {
     display: none;
@@ -164,8 +304,6 @@ button:active {
     z-index: 5;
 }
 
-/* EXIT BUTTON */
-
 #exitButton {
     display: none;
     position: fixed;
@@ -175,310 +313,346 @@ button:active {
     padding: 14px 22px;
 }
 
-/* SMALL SCREEN ADJUSTMENT */
-
-@media (max-height: 650px) {
-
-    #arPoster {
-        max-height: 35vh;
-        width: 65%;
-    }
-
-    .panel {
-        padding: 10px;
-        margin-bottom: 8px;
-    }
-
+@media (max-height: 700px) {
+    #puzzleContent { bottom: max(12px, env(safe-area-inset-bottom)); }
+    #puzzleHint { margin-bottom: 10px; }
+    .joystickUnit { width: min(34vw, 125px); }
+    #arPoster { max-height: 35vh; width: 65%; }
+    .panel { padding: 10px; margin-bottom: 8px; }
 }
 
+@media (max-width: 360px) {
+    .joystickRow { gap: 18px; }
+    .joystickUnit { width: 38vw; }
+}
 </style>
 </head>
 
 <body>
 
-<!-- OPENING POSTER -->
-
+<!-- OPENING SCREEN WITH DUAL-JOYSTICK PUZZLE -->
 <div id="startScreen">
+    <img src="poster.jpg" id="openingPoster" alt="GTA VI Poster">
+    <div id="openingShade"></div>
 
-    <img
-        src="poster.jpg"
-        id="openingPoster"
-        alt="GTA VI Poster"
-    >
+    <div id="puzzleContent">
+        <h1 id="puzzleTitle">UNLOCK LEONIDA</h1>
+        <p id="puzzleHint">
+            Use two fingers. Hold both joysticks at their hidden target directions at the same time.
+        </p>
 
-    <button id="startButton" onclick="startAR()">
-        START AR
-    </button>
+        <div class="joystickRow">
+            <div class="joystickUnit" id="unitOne">
+                <div class="joystickLabel">PLAYER 01</div>
+                <div class="joystick" id="joystickOne" aria-label="First virtual joystick">
+                    <svg class="progressRing" viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="progressTrack" cx="60" cy="60" r="46"></circle>
+                        <circle class="progressValue" id="progressOne" cx="60" cy="60" r="46"></circle>
+                    </svg>
+                    <div class="stick" id="stickOne"></div>
+                </div>
+            </div>
 
+            <div class="joystickUnit" id="unitTwo">
+                <div class="joystickLabel">PLAYER 02</div>
+                <div class="joystick" id="joystickTwo" aria-label="Second virtual joystick">
+                    <svg class="progressRing" viewBox="0 0 120 120" aria-hidden="true">
+                        <circle class="progressTrack" cx="60" cy="60" r="46"></circle>
+                        <circle class="progressValue" id="progressTwo" cx="60" cy="60" r="46"></circle>
+                    </svg>
+                    <div class="stick" id="stickTwo"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="unlockMessage">ALIGN BOTH CONTROLS TOGETHER</div>
+    </div>
 </div>
-
 
 <!-- LIVE CAMERA -->
-
 <video id="camera" autoplay playsinline muted></video>
 
-
 <!-- AR CONTENT -->
-
 <div id="overlay">
-
-    <!-- WELCOME -->
-
     <div class="panel">
-
         <h2>WELCOME TO LEONIDA</h2>
-
-        <p>
-            A world of crime, chaos and opportunity.
-        </p>
-
+        <p>A world of crime, chaos and opportunity.</p>
     </div>
 
-
-    <!-- POSTER OVER CAMERA -->
-
-    <img
-        src="poster.jpg"
-        id="arPoster"
-        alt="GTA VI AR Poster"
-    >
-
-
-    <!-- CHARACTER INFORMATION -->
+    <img src="poster.jpg" id="arPoster" alt="GTA VI AR Poster">
 
     <div class="characters">
-
         <div class="panel">
-
             <h3>LUCIA</h3>
-
-            <button onclick="showInfo('lucia')">
-                EXPLORE
-            </button>
-
+            <button onclick="showInfo('lucia')">EXPLORE</button>
         </div>
-
         <div class="panel">
-
             <h3>JASON</h3>
-
-            <button onclick="showInfo('jason')">
-                EXPLORE
-            </button>
-
+            <button onclick="showInfo('jason')">EXPLORE</button>
         </div>
-
     </div>
-
-
-    <!-- GAME INFORMATION -->
 
     <div class="panel">
-
         <h2>GRAND THEFT AUTO VI</h2>
-
         <p>
             Discover the world of Leonida.
-            Explore the characters and setting
-            of GTA VI.
+            Explore the characters and setting of GTA VI.
         </p>
-
-        <button onclick="showInfo('game')">
-            EXPLORE THE GAME
-        </button>
-
+        <button onclick="showInfo('game')">EXPLORE THE GAME</button>
     </div>
-
 </div>
-
 
 <!-- INFORMATION POPUP -->
-
 <div id="info" class="panel">
-
     <h2 id="infoTitle"></h2>
-
     <p id="infoText"></p>
-
-    <button onclick="closeInfo()">
-        CLOSE
-    </button>
-
+    <button onclick="closeInfo()">CLOSE</button>
 </div>
 
-
 <!-- EXIT AR -->
-
-<button id="exitButton" onclick="stopAR()">
-    EXIT AR
-</button>
-
+<button id="exitButton" onclick="stopAR()">EXIT AR</button>
 
 <script>
-
-/* CAMERA ELEMENT */
-
 const camera = document.getElementById("camera");
+const startScreen = document.getElementById("startScreen");
+const unlockMessage = document.getElementById("unlockMessage");
 
+const JOYSTICK_TOLERANCE = 15; // degrees
+const MAX_STICK_DISTANCE = 34; // percent of joystick width
+const PROGRESS_CIRCUMFERENCE = 289;
 
-/* START AR */
+let targetAngles = [];
+let joystickStates = [
+    { activePointer: null, angle: null, correct: false },
+    { activePointer: null, angle: null, correct: false }
+];
+let unlockStarted = false;
 
+/* RANDOM TARGETS: one new pair each time the page loads */
+function randomizeTargets() {
+    targetAngles = [
+        Math.floor(Math.random() * 360),
+        Math.floor(Math.random() * 360)
+    ];
+}
+
+/* ANGULAR DISTANCE, INCLUDING THE 0/360-DEGREE BOUNDARY */
+function angleDifference(a, b) {
+    return Math.abs(((a - b + 540) % 360) - 180);
+}
+
+/* UPDATE THE JOYSTICK POSITION AND ITS PROGRESS RING */
+function updateJoystick(index, event) {
+    const joystick = document.getElementById(index === 0 ? "joystickOne" : "joystickTwo");
+    const stick = document.getElementById(index === 0 ? "stickOne" : "stickTwo");
+    const progress = document.getElementById(index === 0 ? "progressOne" : "progressTwo");
+    const unit = document.getElementById(index === 0 ? "unitOne" : "unitTwo");
+
+    const rect = joystick.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    let dx = event.clientX - centerX;
+    let dy = event.clientY - centerY;
+
+    const maxDistance = rect.width * 0.34;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > maxDistance) {
+        dx = (dx / distance) * maxDistance;
+        dy = (dy / distance) * maxDistance;
+    }
+
+    const angle = (Math.atan2(-dy, dx) * 180 / Math.PI + 360) % 360;
+    joystickStates[index].angle = angle;
+
+    stick.style.left = `calc(50% + ${dx}px)`;
+    stick.style.top = `calc(50% + ${dy}px)`;
+
+    const difference = angleDifference(angle, targetAngles[index]);
+    const correct = distance > rect.width * 0.12 && difference <= JOYSTICK_TOLERANCE;
+
+    joystickStates[index].correct = correct;
+    unit.classList.toggle("correct", correct);
+
+    // The ring fills as the joystick gets closer to its hidden target direction.
+    // It reaches 100% when the joystick is within the accepted angle tolerance.
+    const progressAmount = Math.max(0, Math.min(1,
+        (75 - difference) / (75 - JOYSTICK_TOLERANCE)
+    ));
+    progress.style.strokeDashoffset =
+        PROGRESS_CIRCUMFERENCE * (1 - progressAmount);
+
+    checkBothJoysticks();
+}
+
+/* RETURN A JOYSTICK TO ITS CENTER WHEN THE USER LIFTS THAT FINGER */
+function releaseJoystick(index, event) {
+    if (joystickStates[index].activePointer !== event.pointerId) return;
+
+    const joystick = document.getElementById(index === 0 ? "joystickOne" : "joystickTwo");
+    const stick = document.getElementById(index === 0 ? "stickOne" : "stickTwo");
+    const progress = document.getElementById(index === 0 ? "progressOne" : "progressTwo");
+    const unit = document.getElementById(index === 0 ? "unitOne" : "unitTwo");
+
+    joystickStates[index].activePointer = null;
+    joystickStates[index].angle = null;
+    joystickStates[index].correct = false;
+
+    stick.style.left = "50%";
+    stick.style.top = "50%";
+    progress.style.strokeDashoffset = PROGRESS_CIRCUMFERENCE;
+    unit.classList.remove("correct");
+
+    checkBothJoysticks();
+}
+
+/* BOTH MUST BE CORRECT AND BOTH FINGERS MUST STILL BE DOWN */
+function checkBothJoysticks() {
+    if (unlockStarted) return;
+
+    const bothCorrect =
+        joystickStates[0].correct &&
+        joystickStates[1].correct &&
+        joystickStates[0].activePointer !== null &&
+        joystickStates[1].activePointer !== null;
+
+    if (bothCorrect) {
+        unlockStarted = true;
+        unlockMessage.textContent = "ACCESS GRANTED";
+        startScreen.classList.add("unlocking");
+
+        setTimeout(() => {
+            startAR();
+        }, 750);
+    } else if (joystickStates.some(state => state.correct)) {
+        unlockMessage.textContent = "GOOD! KEEP BOTH ALIGNED";
+    } else {
+        unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
+    }
+}
+
+/* SET UP MULTI-TOUCH POINTER CONTROLS */
+function setupJoystick(index, element) {
+    element.addEventListener("pointerdown", (event) => {
+        if (unlockStarted || joystickStates[index].activePointer !== null) return;
+
+        event.preventDefault();
+        joystickStates[index].activePointer = event.pointerId;
+        element.setPointerCapture(event.pointerId);
+        updateJoystick(index, event);
+    });
+
+    element.addEventListener("pointermove", (event) => {
+        if (joystickStates[index].activePointer !== event.pointerId) return;
+        event.preventDefault();
+        updateJoystick(index, event);
+    });
+
+    element.addEventListener("pointerup", (event) => {
+        releaseJoystick(index, event);
+    });
+
+    element.addEventListener("pointercancel", (event) => {
+        releaseJoystick(index, event);
+    });
+
+    element.addEventListener("lostpointercapture", (event) => {
+        releaseJoystick(index, event);
+    });
+}
+
+setupJoystick(0, document.getElementById("joystickOne"));
+setupJoystick(1, document.getElementById("joystickTwo"));
+randomizeTargets();
+
+/* START AR AFTER THE PUZZLE IS SOLVED */
 async function startAR() {
-
     try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error("Camera access requires HTTPS or localhost.");
+        }
 
-        const stream =
-            await navigator.mediaDevices.getUserMedia({
-
-                video: {
-                    facingMode: "environment"
-                },
-
-                audio: false
-
-            });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+            audio: false
+        });
 
         camera.srcObject = stream;
-
         await camera.play();
 
-        // HIDE OPENING SCREEN
-
-        document.getElementById(
-            "startScreen"
-        ).style.display = "none";
-
-        // SHOW CAMERA
-
+        startScreen.style.display = "none";
         camera.style.display = "block";
-
-        // SHOW AR CONTENT
-
-        document.getElementById(
-            "overlay"
-        ).style.display = "block";
-
-        // SHOW EXIT BUTTON
-
-        document.getElementById(
-            "exitButton"
-        ).style.display = "block";
-
-    }
-
-    catch (error) {
-
-        alert(
-            "Camera access failed. Please allow camera permission."
-        );
-
+        document.getElementById("overlay").style.display = "block";
+        document.getElementById("exitButton").style.display = "block";
+    } catch (error) {
+        unlockStarted = false;
+        startScreen.classList.remove("unlocking");
+        unlockMessage.textContent = "CAMERA ACCESS FAILED — TRY AGAIN";
+        alert("Camera access failed. Please allow camera permission and make sure the website uses HTTPS.");
         console.error(error);
-
     }
-
 }
-
 
 /* SHOW INFORMATION */
-
 function showInfo(type) {
-
-    const title =
-        document.getElementById("infoTitle");
-
-    const text =
-        document.getElementById("infoText");
-
+    const title = document.getElementById("infoTitle");
+    const text = document.getElementById("infoText");
 
     if (type === "lucia") {
-
         title.innerText = "LUCIA";
-
         text.innerText =
             "Lucia is one of the two protagonists in Grand Theft Auto VI. Discover her story and journey through Leonida.";
-
-    }
-
-    else if (type === "jason") {
-
+    } else if (type === "jason") {
         title.innerText = "JASON";
-
         text.innerText =
             "Jason is the other protagonist in Grand Theft Auto VI. Explore his character and his connection with Lucia.";
-
-    }
-
-    else {
-
+    } else {
         title.innerText = "GRAND THEFT AUTO VI";
-
         text.innerText =
             "Developed by Rockstar Games, GTA VI takes players to Leonida, a fictional state inspired by Florida. Discover its characters and setting.";
-
     }
 
-    document.getElementById(
-        "info"
-    ).style.display = "block";
-
+    document.getElementById("info").style.display = "block";
 }
-
 
 /* CLOSE INFORMATION */
-
 function closeInfo() {
-
-    document.getElementById(
-        "info"
-    ).style.display = "none";
-
+    document.getElementById("info").style.display = "none";
 }
 
-
-/* EXIT AR */
-
+/* EXIT AR AND RETURN TO THE OPENING PUZZLE */
 function stopAR() {
-
-    // STOP CAMERA
-
     if (camera.srcObject) {
-
-        camera.srcObject
-            .getTracks()
-            .forEach(track => track.stop());
-
+        camera.srcObject.getTracks().forEach(track => track.stop());
         camera.srcObject = null;
-
     }
 
-    // HIDE CAMERA
-
     camera.style.display = "none";
-
-    // HIDE AR CONTENT
-
-    document.getElementById(
-        "overlay"
-    ).style.display = "none";
-
-    // CLOSE POPUP
-
+    document.getElementById("overlay").style.display = "none";
     closeInfo();
+    document.getElementById("exitButton").style.display = "none";
 
-    // HIDE EXIT BUTTON
+    // Prepare a fresh randomized puzzle for the next attempt.
+    unlockStarted = false;
+    joystickStates = [
+        { activePointer: null, angle: null, correct: false },
+        { activePointer: null, angle: null, correct: false }
+    ];
+    randomizeTargets();
 
-    document.getElementById(
-        "exitButton"
-    ).style.display = "none";
-
-    // RETURN TO OPENING POSTER
-
-    document.getElementById(
-        "startScreen"
-    ).style.display = "flex";
-
+    document.getElementById("stickOne").style.left = "50%";
+    document.getElementById("stickOne").style.top = "50%";
+    document.getElementById("stickTwo").style.left = "50%";
+    document.getElementById("stickTwo").style.top = "50%";
+    document.getElementById("progressOne").style.strokeDashoffset = PROGRESS_CIRCUMFERENCE;
+    document.getElementById("progressTwo").style.strokeDashoffset = PROGRESS_CIRCUMFERENCE;
+    document.getElementById("unitOne").classList.remove("correct");
+    document.getElementById("unitTwo").classList.remove("correct");
+    unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
+    startScreen.classList.remove("unlocking");
+    startScreen.style.display = "flex";
 }
-
 </script>
 
 </body>
