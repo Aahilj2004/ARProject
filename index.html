@@ -318,37 +318,16 @@ html, body {
 #startScreen.ar-ready #openingShade {
     display: none;
 }
-#startScreen.ar-ready #openingCamera {
-    display: none;
+#startScreen.ar-ready #openingCamera,
+#startScreen.ar-ready #driverSeatBackground {
+    display: none !important;
 }
 #startScreen.ar-ready {
+    /* Keep the page layer, but let the WebXR camera passthrough show through it. */
+    background: transparent !important;
     pointer-events: none;
 }
 
-
-#enterARButton {
-    display: none;
-    position: absolute;
-    z-index: 5;
-    left: 50%;
-    bottom: max(28px, env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    border: 1px solid rgba(255, 190, 225, 0.9);
-    border-radius: 999px;
-    padding: 15px 28px;
-    color: #fff;
-    background: linear-gradient(135deg, #c02678, #6d28d9);
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    box-shadow: 0 0 24px rgba(226, 72, 170, 0.45);
-}
-#startScreen.puzzle-complete #puzzleContent {
-    display: none;
-}
-#startScreen.puzzle-complete #enterARButton {
-    display: block;
-}
 
 </style>
 </head>
@@ -393,7 +372,6 @@ html, body {
 
         <div id="unlockMessage">ALIGN BOTH CONTROLS TOGETHER</div>
     </div>
-    <button id="enterARButton" type="button">ENTER AR</button>
 </div>
 
 <!-- WEBXR STATUS OVERLAY (shown only during AR placement) -->
@@ -407,7 +385,6 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const startScreen = document.getElementById("startScreen");
 const unlockMessage = document.getElementById("unlockMessage");
 const xrStatus = document.getElementById("xrStatus");
-document.getElementById("enterARButton").addEventListener("click", startAR);
 
 const openingCamera = document.getElementById("openingCamera");
 let openingCameraStream = null;
@@ -580,8 +557,9 @@ function checkBothJoysticks() {
 
         startScreen.classList.add("unlocking");
         setTimeout(() => {
-            startScreen.classList.add("puzzle-complete");
             startScreen.classList.remove("unlocking");
+            // Automatically enter immersive AR as soon as the unlock animation finishes.
+            startAR();
         }, 750);
     } else if (joystickStates.some(state => state.correct)) {
         unlockMessage.textContent = "GOOD! KEEP BOTH ALIGNED";
@@ -760,7 +738,6 @@ async function startAR() {
         }
         unlockStarted = false;
         startScreen.classList.remove("unlocking");
-        startScreen.classList.remove("puzzle-complete");
         startScreen.classList.remove("ar-ready");
         startScreen.style.display = "flex";
         startOpeningCamera();
@@ -791,7 +768,6 @@ function resetPuzzle() {
     randomizeTargets();
     unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
     startScreen.classList.remove("unlocking");
-    startScreen.classList.remove("puzzle-complete");
     startScreen.style.display = "flex";
 }
 </script>
