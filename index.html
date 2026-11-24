@@ -303,7 +303,10 @@ html, body {
     object-fit: cover;
     object-position: center;
     z-index: 0;
-    background: #111;
+    background: #222;
+    display: block !important;
+    visibility: visible;
+    opacity: 1;
 }
 #driverSeatBackground {
     z-index: 1;
@@ -383,22 +386,61 @@ const openingCamera = document.getElementById("openingCamera");
 let openingCameraStream = null;
 
 async function startOpeningCamera() {
+    if (openingCameraStream && openingCameraStream.active) return;
+
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        unlockMessage.textContent = "CAMERA NEEDS HTTPS — CONTINUE TO AR";
+        unlockMessage.textContent = "CAMERA NEEDS HTTPS — OPEN THIS PAGE SECURELY";
         return;
     }
+
     try {
-        openingCameraStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" } },
-            audio: false
-        });
+        try {
+            openingCameraStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: { ideal: "environment" },
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                },
+                audio: false
+            });
+        } catch (rearCameraError) {
+            // Some phones do not accept the preferred rear-camera constraints.
+            openingCameraStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false
+            });
+        }
+
         openingCamera.srcObject = openingCameraStream;
+        openingCamera.muted = true;
+        openingCamera.autoplay = true;
+        openingCamera.playsInline = true;
+
+        await new Promise((resolve, reject) => {
+            if (openingCamera.readyState >= 2) {
+                resolve();
+                return;
+            }
+            openingCamera.onloadedmetadata = () => resolve();
+            openingCamera.onerror = () => reject(new Error("Camera preview could not load."));
+        });
+
         await openingCamera.play();
+        unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
     } catch (error) {
         console.warn("Opening camera preview could not start:", error);
-        unlockMessage.textContent = "ALLOW CAMERA ACCESS TO CONTINUE";
+        unlockMessage.textContent =
+            error.name === "NotAllowedError"
+                ? "ALLOW CAMERA ACCESS, THEN TOUCH THE SCREEN"
+                : "CAMERA UNAVAILABLE — CHECK PERMISSION AND HTTPS";
     }
 }
+
+// Retry after the first real interaction; some mobile browsers only start
+// camera playback after a user gesture.
+document.addEventListener("pointerdown", () => {
+    if (!openingCameraStream) startOpeningCamera();
+}, { once: true });
 
 function stopOpeningCamera() {
     if (openingCameraStream) {
