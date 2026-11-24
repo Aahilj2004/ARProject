@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>GTA VI - WebAR</title>
+<title>GTA VI - World AR</title>
 
 <style>
 * {
@@ -192,91 +192,37 @@ html, body {
     100% { opacity: 0; transform: scale(1.08); }
 }
 
-/* CAMERA */
-#camera {
-    display: none;
+/* WEBXR CAMERA VIEW */
+#xrCanvas {
     position: fixed;
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
     z-index: 1;
-}
-
-/* AR OVERLAY */
-#overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 2;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    padding: 12px;
+    display: block;
     pointer-events: none;
 }
 
-/* THE ONLY ITEM ON THE MAIN AR SCREEN */
-#arPoster {
-    display: block;
-    width: 100%;
-    height: 100%;
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-    margin: 0 auto;
-    border-radius: 5px;
-    box-shadow: 0 0 20px rgba(233, 165, 206, 0.5);
-}
-
-/* INFORMATION PANELS (unused on the poster-only screen) */
-.panel {
-    background: rgba(25, 17, 27, 0.92);
-    border: 1px solid #e9a5ce;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 12px;
+/* Brief placement instruction; hidden after the poster is placed. */
+#xrStatus {
+    display: none;
+    position: fixed;
+    left: 50%;
+    bottom: max(24px, env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    z-index: 5;
+    width: max-content;
+    max-width: calc(100vw - 32px);
+    padding: 11px 16px;
+    border: 1px solid rgba(255, 210, 233, 0.75);
+    border-radius: 20px;
+    background: rgba(20, 12, 24, 0.82);
+    color: #fff;
     text-align: center;
-    pointer-events: auto;
+    font-size: 12px;
+    line-height: 1.4;
+    pointer-events: none;
 }
-
-.panel h2 {
-    color: #f2a6ce;
-    font-size: 20px;
-    margin-bottom: 8px;
-}
-
-.panel h3 {
-    color: #f2a6ce;
-    margin-bottom: 10px;
-}
-
-.panel p {
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.characters {
-    display: flex;
-    gap: 10px;
-}
-
-.characters .panel { flex: 1; }
-
-button {
-    background: #e9a5ce;
-    color: #171117;
-    border: none;
-    border-radius: 7px;
-    padding: 13px 18px;
-    margin-top: 10px;
-    font-weight: bold;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-button:active { transform: scale(0.96); }
-
 
 
 @media (max-height: 700px) {
@@ -331,21 +277,19 @@ button:active { transform: scale(0.96); }
     </div>
 </div>
 
-<!-- LIVE CAMERA -->
-<video id="camera" autoplay playsinline muted></video>
-
-<!-- MAIN AR SCREEN: POSTER ONLY -->
-<div id="overlay">
-    <img src="poster.jpg" id="arPoster" alt="GTA VI AR Poster">
+<!-- WEBXR STATUS OVERLAY (shown only during AR placement) -->
+<div id="xrStatus" aria-live="polite">
+    Move your phone around, then tap to place the poster.
 </div>
 
-<script>
-const camera = document.getElementById("camera");
+<script type="module">
+import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
 const startScreen = document.getElementById("startScreen");
 const unlockMessage = document.getElementById("unlockMessage");
+const xrStatus = document.getElementById("xrStatus");
 
-const JOYSTICK_TOLERANCE = 15; // degrees
-const MAX_STICK_DISTANCE = 34; // percent of joystick width
+const JOYSTICK_TOLERANCE = 15;
 const PROGRESS_CIRCUMFERENCE = 289;
 
 let targetAngles = [];
@@ -355,20 +299,22 @@ let joystickStates = [
 ];
 let unlockStarted = false;
 
-/* RANDOM TARGETS: one new pair each time the page loads */
+let renderer = null;
+let xrSession = null;
+let xrCamera = null;
+let posterMesh = null;
+let posterPlaced = false;
+
 function randomizeTargets() {
-    // Both joysticks share one randomized target direction.
-    // This means the user moves both controls toward the same side.
+    // Both joysticks share one random target direction.
     const sharedAngle = Math.floor(Math.random() * 360);
     targetAngles = [sharedAngle, sharedAngle];
 }
 
-/* ANGULAR DISTANCE, INCLUDING THE 0/360-DEGREE BOUNDARY */
 function angleDifference(a, b) {
     return Math.abs(((a - b + 540) % 360) - 180);
 }
 
-/* UPDATE THE JOYSTICK POSITION AND ITS PROGRESS RING */
 function updateJoystick(index, event) {
     const joystick = document.getElementById(index === 0 ? "joystickOne" : "joystickTwo");
     const stick = document.getElementById(index === 0 ? "stickOne" : "stickTwo");
@@ -402,8 +348,6 @@ function updateJoystick(index, event) {
     joystickStates[index].correct = correct;
     unit.classList.toggle("correct", correct);
 
-    // The ring fills as the joystick gets closer to its hidden target direction.
-    // It reaches 100% when the joystick is within the accepted angle tolerance.
     const progressAmount = Math.max(0, Math.min(1,
         (75 - difference) / (75 - JOYSTICK_TOLERANCE)
     ));
@@ -413,11 +357,9 @@ function updateJoystick(index, event) {
     checkBothJoysticks();
 }
 
-/* RETURN A JOYSTICK TO ITS CENTER WHEN THE USER LIFTS THAT FINGER */
 function releaseJoystick(index, event) {
     if (joystickStates[index].activePointer !== event.pointerId) return;
 
-    const joystick = document.getElementById(index === 0 ? "joystickOne" : "joystickTwo");
     const stick = document.getElementById(index === 0 ? "stickOne" : "stickTwo");
     const progress = document.getElementById(index === 0 ? "progressOne" : "progressTwo");
     const unit = document.getElementById(index === 0 ? "unitOne" : "unitTwo");
@@ -434,7 +376,6 @@ function releaseJoystick(index, event) {
     checkBothJoysticks();
 }
 
-/* BOTH MUST BE CORRECT AND BOTH FINGERS MUST STILL BE DOWN */
 function checkBothJoysticks() {
     if (unlockStarted) return;
 
@@ -447,11 +388,9 @@ function checkBothJoysticks() {
     if (bothCorrect) {
         unlockStarted = true;
         unlockMessage.textContent = "ACCESS GRANTED";
-        startScreen.classList.add("unlocking");
 
-        setTimeout(() => {
-            startAR();
-        }, 750);
+        startScreen.classList.add("unlocking");
+        setTimeout(() => startAR(), 750);
     } else if (joystickStates.some(state => state.correct)) {
         unlockMessage.textContent = "GOOD! KEEP BOTH ALIGNED";
     } else {
@@ -459,11 +398,9 @@ function checkBothJoysticks() {
     }
 }
 
-/* SET UP MULTI-TOUCH POINTER CONTROLS */
 function setupJoystick(index, element) {
     element.addEventListener("pointerdown", (event) => {
         if (unlockStarted || joystickStates[index].activePointer !== null) return;
-
         event.preventDefault();
         joystickStates[index].activePointer = event.pointerId;
         element.setPointerCapture(event.pointerId);
@@ -476,51 +413,186 @@ function setupJoystick(index, element) {
         updateJoystick(index, event);
     });
 
-    element.addEventListener("pointerup", (event) => {
-        releaseJoystick(index, event);
-    });
-
-    element.addEventListener("pointercancel", (event) => {
-        releaseJoystick(index, event);
-    });
-
-    element.addEventListener("lostpointercapture", (event) => {
-        releaseJoystick(index, event);
-    });
+    element.addEventListener("pointerup", event => releaseJoystick(index, event));
+    element.addEventListener("pointercancel", event => releaseJoystick(index, event));
+    element.addEventListener("lostpointercapture", event => releaseJoystick(index, event));
 }
 
 setupJoystick(0, document.getElementById("joystickOne"));
 setupJoystick(1, document.getElementById("joystickTwo"));
 randomizeTargets();
 
-/* START AR AFTER THE PUZZLE IS SOLVED */
+/* CREATE A THREE.JS SCENE WITH A TRANSPARENT BACKGROUND */
+function createARScene() {
+    const scene = new THREE.Scene();
+
+    xrCamera = new THREE.PerspectiveCamera();
+    renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance"
+    });
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    renderer.xr.setReferenceSpaceType("local");
+    renderer.setClearColor(0x000000, 0);
+
+    renderer.domElement.id = "xrCanvas";
+    document.body.appendChild(renderer.domElement);
+
+    // Load the existing poster as a texture on a flat plane in 3D space.
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.load(
+        "./poster.jpg",
+        texture => {
+            texture.colorSpace = THREE.SRGBColorSpace;
+
+            const imageWidth = texture.image.width || 2;
+            const imageHeight = texture.image.height || 3;
+            const posterWidth = 1.2; // 1.2 metres wide in the virtual room
+            const posterHeight = posterWidth * imageHeight / imageWidth;
+
+            const geometry = new THREE.PlaneGeometry(posterWidth, posterHeight);
+            const material = new THREE.MeshBasicMaterial({
+                map: texture,
+                side: THREE.DoubleSide,
+                transparent: false
+            });
+
+            posterMesh = new THREE.Mesh(geometry, material);
+            posterMesh.visible = false;
+            scene.add(posterMesh);
+        },
+        undefined,
+        error => {
+            console.error("Could not load poster.jpg", error);
+            xrStatus.textContent = "Could not load poster.jpg. Check the filename.";
+        }
+    );
+
+    renderer.setAnimationLoop(() => {
+        renderer.render(scene, xrCamera);
+    });
+
+    return scene;
+}
+
+let arScene = null;
+
+/* PLACE THE POSTER IN FRONT OF THE USER, THEN LEAVE IT FIXED IN WORLD SPACE */
+function placePosterFromCurrentView() {
+    if (!posterMesh || !renderer || !renderer.xr.isPresenting) return;
+
+    // Read the live tracked XR camera pose, not the ordinary page camera.
+    const activeCamera = renderer.xr.getCamera(xrCamera);
+    activeCamera.updateMatrixWorld(true);
+
+    const forward = new THREE.Vector3();
+    activeCamera.getWorldDirection(forward);
+    forward.y = 0; // Keep the poster upright at approximately eye height.
+    if (forward.lengthSq() < 0.0001) forward.set(0, 0, -1);
+    forward.normalize();
+
+    const viewerPosition = new THREE.Vector3();
+    activeCamera.getWorldPosition(viewerPosition);
+
+    // Place it about 1.8 metres in front of the phone at the user's viewing height.
+    posterMesh.position.copy(viewerPosition).add(forward.clone().multiplyScalar(1.8));
+
+    // Keep the poster vertical and turn its front toward the user.
+    const yaw = Math.atan2(-forward.x, -forward.z);
+    posterMesh.rotation.set(0, yaw, 0);
+
+    posterMesh.visible = true;
+    posterPlaced = true;
+    xrStatus.style.display = "none";
+}
+
+/* START AN IMMERSIVE AR SESSION */
 async function startAR() {
     try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error("Camera access requires HTTPS or localhost.");
+        if (!navigator.xr) {
+            throw new Error("WebXR is not available in this browser. Use Google Chrome on an ARCore-supported Android phone.");
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" },
-            audio: false
+        const supported = await navigator.xr.isSessionSupported("immersive-ar");
+        if (!supported) {
+            throw new Error("This phone or browser does not support immersive WebXR AR.");
+        }
+
+        arScene = createARScene();
+
+        const session = await navigator.xr.requestSession("immersive-ar", {
+            optionalFeatures: ["local-floor", "dom-overlay"],
+            domOverlay: { root: document.body }
         });
 
-        camera.srcObject = stream;
-        await camera.play();
+        xrSession = session;
+        await renderer.xr.setSession(session);
 
         startScreen.style.display = "none";
-        camera.style.display = "block";
-        document.getElementById("overlay").style.display = "flex";
+        xrStatus.textContent = "Move your phone around, then tap to place the floating poster.";
+        xrStatus.style.display = "block";
+
+        // A screen tap generates the WebXR "select" event.
+        session.addEventListener("select", placePosterFromCurrentView);
+
+        session.addEventListener("end", () => {
+            xrSession = null;
+            xrStatus.style.display = "none";
+            if (renderer) {
+                renderer.setAnimationLoop(null);
+                renderer.dispose();
+                renderer.domElement.remove();
+                renderer = null;
+            }
+            posterMesh = null;
+            posterPlaced = false;
+            arScene = null;
+            resetPuzzle();
+        });
     } catch (error) {
+        console.error(error);
+        if (renderer && !xrSession) {
+            renderer.setAnimationLoop(null);
+            renderer.dispose();
+            renderer.domElement.remove();
+            renderer = null;
+        }
         unlockStarted = false;
         startScreen.classList.remove("unlocking");
-        unlockMessage.textContent = "CAMERA ACCESS FAILED — TRY AGAIN";
-        alert("Camera access failed. Please allow camera permission and make sure the website uses HTTPS.");
-        console.error(error);
+        startScreen.style.display = "flex";
+        unlockMessage.textContent = "AR COULD NOT START — TRY AGAIN";
+        alert(
+            error.message +
+            "\n\nCheck that you are using Chrome on an ARCore-supported Android phone, that the site uses HTTPS, and that Google Play Services for AR is installed."
+        );
     }
 }
 
-</script>
+function resetPuzzle() {
+    unlockStarted = false;
+    joystickStates = [
+        { activePointer: null, angle: null, correct: false },
+        { activePointer: null, angle: null, correct: false }
+    ];
 
+    ["One", "Two"].forEach((suffix, index) => {
+        document.getElementById("stick" + suffix).style.left = "50%";
+        document.getElementById("stick" + suffix).style.top = "50%";
+        document.getElementById("progress" + suffix).style.strokeDashoffset =
+            PROGRESS_CIRCUMFERENCE;
+        document.getElementById(index === 0 ? "unitOne" : "unitTwo")
+            .classList.remove("correct");
+    });
+
+    randomizeTargets();
+    unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
+    startScreen.classList.remove("unlocking");
+    startScreen.style.display = "flex";
+}
+</script>
 </body>
 </html>
