@@ -294,6 +294,34 @@ html, body {
     z-index: 3;
 }
 
+
+#openingCamera {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    background: #111;
+}
+#driverSeatBackground {
+    z-index: 1;
+}
+#openingShade {
+    z-index: 2;
+}
+#startScreen.ar-ready #puzzleContent,
+#startScreen.ar-ready #openingShade {
+    display: none;
+}
+#startScreen.ar-ready #openingCamera {
+    display: none;
+}
+#startScreen.ar-ready {
+    pointer-events: none;
+}
+
 </style>
 </head>
 
@@ -301,7 +329,7 @@ html, body {
 
 <!-- OPENING SCREEN WITH DUAL-JOYSTICK PUZZLE -->
 <div id="startScreen">
-    <img src="poster.jpg" id="posterBehindCar" alt="Poster behind the car">
+    <video id="openingCamera" autoplay muted playsinline></video>
 <img src="car-interior-overlay.png" id="driverSeatBackground" alt="Car interior frame with transparent windshield">
     <div id="openingShade"></div>
 
@@ -350,6 +378,36 @@ import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.m
 const startScreen = document.getElementById("startScreen");
 const unlockMessage = document.getElementById("unlockMessage");
 const xrStatus = document.getElementById("xrStatus");
+
+const openingCamera = document.getElementById("openingCamera");
+let openingCameraStream = null;
+
+async function startOpeningCamera() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        unlockMessage.textContent = "CAMERA NEEDS HTTPS — CONTINUE TO AR";
+        return;
+    }
+    try {
+        openingCameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false
+        });
+        openingCamera.srcObject = openingCameraStream;
+        await openingCamera.play();
+    } catch (error) {
+        console.warn("Opening camera preview could not start:", error);
+        unlockMessage.textContent = "ALLOW CAMERA ACCESS TO CONTINUE";
+    }
+}
+
+function stopOpeningCamera() {
+    if (openingCameraStream) {
+        openingCameraStream.getTracks().forEach(track => track.stop());
+        openingCameraStream = null;
+    }
+    openingCamera.srcObject = null;
+}
+
 
 const JOYSTICK_TOLERANCE = 15;
 const PROGRESS_CIRCUMFERENCE = 289;
@@ -480,6 +538,7 @@ function setupJoystick(index, element) {
     element.addEventListener("lostpointercapture", event => releaseJoystick(index, event));
 }
 
+startOpeningCamera();
 setupJoystick(0, document.getElementById("joystickOne"));
 setupJoystick(1, document.getElementById("joystickTwo"));
 randomizeTargets();
@@ -575,6 +634,7 @@ function placePosterFromCurrentView() {
 /* START AN IMMERSIVE AR SESSION */
 async function startAR() {
     try {
+        stopOpeningCamera();
         if (!navigator.xr) {
             throw new Error("WebXR is not available in this browser. Use Google Chrome on an ARCore-supported Android phone.");
         }
@@ -594,8 +654,8 @@ async function startAR() {
         xrSession = session;
         await renderer.xr.setSession(session);
 
-        startScreen.style.display = "none";
-        xrStatus.textContent = "Move your phone around, then tap to place the floating poster.";
+        startScreen.classList.add("ar-ready");
+        xrStatus.textContent = "Move your phone around, then tap to place the floating poster."; 
         xrStatus.style.display = "block";
 
         // A screen tap generates the WebXR "select" event.
@@ -613,6 +673,9 @@ async function startAR() {
             posterMesh = null;
             posterPlaced = false;
             arScene = null;
+            startScreen.classList.remove("ar-ready");
+            startScreen.style.display = "flex";
+            startOpeningCamera();
             resetPuzzle();
         });
     } catch (error) {
@@ -625,7 +688,9 @@ async function startAR() {
         }
         unlockStarted = false;
         startScreen.classList.remove("unlocking");
+        startScreen.classList.remove("ar-ready");
         startScreen.style.display = "flex";
+        startOpeningCamera();
         unlockMessage.textContent = "AR COULD NOT START — TRY AGAIN";
         alert(
             error.message +
