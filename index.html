@@ -34,26 +34,7 @@ html, body {
     overflow: hidden;
 }
 
-#openingPoster {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    background: #111;
-}
 
-#openingShade {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-        to bottom,
-        rgba(10, 5, 15, 0.08) 20%,
-        rgba(10, 5, 15, 0.25) 45%,
-        rgba(10, 5, 15, 0.94) 100%
-    );
-    pointer-events: none;
-}
 
 #puzzleContent {
     position: absolute;
@@ -228,24 +209,27 @@ html, body {
     position: fixed;
     inset: 0;
     z-index: 2;
-    overflow-y: auto;
-    padding: 15px 15px 90px;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 12px;
     pointer-events: none;
 }
 
-/* POSTER INSIDE CAMERA */
+/* THE ONLY ITEM ON THE MAIN AR SCREEN */
 #arPoster {
     display: block;
-    width: 75%;
-    max-height: 48vh;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
     object-fit: contain;
-    margin: 12px auto;
+    margin: 0 auto;
     border-radius: 5px;
     box-shadow: 0 0 20px rgba(233, 165, 206, 0.5);
-    pointer-events: none;
 }
 
-/* INFORMATION PANELS */
+/* INFORMATION PANELS (unused on the poster-only screen) */
 .panel {
     background: rgba(25, 17, 27, 0.92);
     border: 1px solid #e9a5ce;
@@ -293,31 +277,12 @@ button {
 
 button:active { transform: scale(0.96); }
 
-#info {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 85%;
-    max-width: 350px;
-    z-index: 5;
-}
 
-#exitButton {
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    right: 15px;
-    z-index: 6;
-    padding: 14px 22px;
-}
 
 @media (max-height: 700px) {
     #puzzleContent { bottom: max(12px, env(safe-area-inset-bottom)); }
     #puzzleHint { margin-bottom: 10px; }
     .joystickUnit { width: min(34vw, 125px); }
-    #arPoster { max-height: 35vh; width: 65%; }
     .panel { padding: 10px; margin-bottom: 8px; }
 }
 
@@ -332,10 +297,7 @@ button:active { transform: scale(0.96); }
 
 <!-- OPENING SCREEN WITH DUAL-JOYSTICK PUZZLE -->
 <div id="startScreen">
-    <img src="poster.jpg" id="openingPoster" alt="GTA VI Poster">
-    <div id="openingShade"></div>
-
-    <div id="puzzleContent">
+<div id="puzzleContent">
         <h1 id="puzzleTitle">UNLOCK LEONIDA</h1>
         <p id="puzzleHint">
             Use two fingers. Hold both joysticks at their hidden target directions at the same time.
@@ -372,45 +334,10 @@ button:active { transform: scale(0.96); }
 <!-- LIVE CAMERA -->
 <video id="camera" autoplay playsinline muted></video>
 
-<!-- AR CONTENT -->
+<!-- MAIN AR SCREEN: POSTER ONLY -->
 <div id="overlay">
-    <div class="panel">
-        <h2>WELCOME TO LEONIDA</h2>
-        <p>A world of crime, chaos and opportunity.</p>
-    </div>
-
     <img src="poster.jpg" id="arPoster" alt="GTA VI AR Poster">
-
-    <div class="characters">
-        <div class="panel">
-            <h3>LUCIA</h3>
-            <button onclick="showInfo('lucia')">EXPLORE</button>
-        </div>
-        <div class="panel">
-            <h3>JASON</h3>
-            <button onclick="showInfo('jason')">EXPLORE</button>
-        </div>
-    </div>
-
-    <div class="panel">
-        <h2>GRAND THEFT AUTO VI</h2>
-        <p>
-            Discover the world of Leonida.
-            Explore the characters and setting of GTA VI.
-        </p>
-        <button onclick="showInfo('game')">EXPLORE THE GAME</button>
-    </div>
 </div>
-
-<!-- INFORMATION POPUP -->
-<div id="info" class="panel">
-    <h2 id="infoTitle"></h2>
-    <p id="infoText"></p>
-    <button onclick="closeInfo()">CLOSE</button>
-</div>
-
-<!-- EXIT AR -->
-<button id="exitButton" onclick="stopAR()">EXIT AR</button>
 
 <script>
 const camera = document.getElementById("camera");
@@ -430,10 +357,10 @@ let unlockStarted = false;
 
 /* RANDOM TARGETS: one new pair each time the page loads */
 function randomizeTargets() {
-    targetAngles = [
-        Math.floor(Math.random() * 360),
-        Math.floor(Math.random() * 360)
-    ];
+    // Both joysticks share one randomized target direction.
+    // This means the user moves both controls toward the same side.
+    const sharedAngle = Math.floor(Math.random() * 360);
+    targetAngles = [sharedAngle, sharedAngle];
 }
 
 /* ANGULAR DISTANCE, INCLUDING THE 0/360-DEGREE BOUNDARY */
@@ -583,8 +510,7 @@ async function startAR() {
 
         startScreen.style.display = "none";
         camera.style.display = "block";
-        document.getElementById("overlay").style.display = "block";
-        document.getElementById("exitButton").style.display = "block";
+        document.getElementById("overlay").style.display = "flex";
     } catch (error) {
         unlockStarted = false;
         startScreen.classList.remove("unlocking");
@@ -594,65 +520,6 @@ async function startAR() {
     }
 }
 
-/* SHOW INFORMATION */
-function showInfo(type) {
-    const title = document.getElementById("infoTitle");
-    const text = document.getElementById("infoText");
-
-    if (type === "lucia") {
-        title.innerText = "LUCIA";
-        text.innerText =
-            "Lucia is one of the two protagonists in Grand Theft Auto VI. Discover her story and journey through Leonida.";
-    } else if (type === "jason") {
-        title.innerText = "JASON";
-        text.innerText =
-            "Jason is the other protagonist in Grand Theft Auto VI. Explore his character and his connection with Lucia.";
-    } else {
-        title.innerText = "GRAND THEFT AUTO VI";
-        text.innerText =
-            "Developed by Rockstar Games, GTA VI takes players to Leonida, a fictional state inspired by Florida. Discover its characters and setting.";
-    }
-
-    document.getElementById("info").style.display = "block";
-}
-
-/* CLOSE INFORMATION */
-function closeInfo() {
-    document.getElementById("info").style.display = "none";
-}
-
-/* EXIT AR AND RETURN TO THE OPENING PUZZLE */
-function stopAR() {
-    if (camera.srcObject) {
-        camera.srcObject.getTracks().forEach(track => track.stop());
-        camera.srcObject = null;
-    }
-
-    camera.style.display = "none";
-    document.getElementById("overlay").style.display = "none";
-    closeInfo();
-    document.getElementById("exitButton").style.display = "none";
-
-    // Prepare a fresh randomized puzzle for the next attempt.
-    unlockStarted = false;
-    joystickStates = [
-        { activePointer: null, angle: null, correct: false },
-        { activePointer: null, angle: null, correct: false }
-    ];
-    randomizeTargets();
-
-    document.getElementById("stickOne").style.left = "50%";
-    document.getElementById("stickOne").style.top = "50%";
-    document.getElementById("stickTwo").style.left = "50%";
-    document.getElementById("stickTwo").style.top = "50%";
-    document.getElementById("progressOne").style.strokeDashoffset = PROGRESS_CIRCUMFERENCE;
-    document.getElementById("progressTwo").style.strokeDashoffset = PROGRESS_CIRCUMFERENCE;
-    document.getElementById("unitOne").classList.remove("correct");
-    document.getElementById("unitTwo").classList.remove("correct");
-    unlockMessage.textContent = "ALIGN BOTH CONTROLS TOGETHER";
-    startScreen.classList.remove("unlocking");
-    startScreen.style.display = "flex";
-}
 </script>
 
 </body>
