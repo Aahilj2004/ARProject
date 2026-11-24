@@ -34,10 +34,35 @@ html, body {
     overflow: hidden;
 }
 
+#driverSeatBackground {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+}
+
+#openingShade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(
+        to bottom,
+        rgba(8, 5, 12, 0.03) 25%,
+        rgba(8, 5, 12, 0.10) 48%,
+        rgba(8, 5, 12, 0.78) 72%,
+        rgba(8, 5, 12, 0.94) 100%
+    );
+    pointer-events: none;
+}
+
 
 
 #puzzleContent {
     position: absolute;
+    z-index: 2;
     left: 0;
     right: 0;
     bottom: max(24px, env(safe-area-inset-bottom));
@@ -243,7 +268,10 @@ html, body {
 
 <!-- OPENING SCREEN WITH DUAL-JOYSTICK PUZZLE -->
 <div id="startScreen">
-<div id="puzzleContent">
+    <img src="driver-seat-background.png" id="driverSeatBackground" alt="View from inside a car at the driver's seat">
+    <div id="openingShade"></div>
+
+    <div id="puzzleContent">
         <h1 id="puzzleTitle">UNLOCK LEONIDA</h1>
         <p id="puzzleHint">
             Use two fingers. Hold both joysticks at their hidden target directions at the same time.
